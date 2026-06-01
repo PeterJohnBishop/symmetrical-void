@@ -1,4 +1,0 @@
-# symmetrical-void
-
-
-
