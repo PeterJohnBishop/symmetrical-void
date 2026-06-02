@@ -2,13 +2,16 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 
 	"github.com/joho/godotenv"
+	"github.com/peterjohnbishop/symmetrical-void/p2p"
 	"github.com/peterjohnbishop/symmetrical-void/wsclient"
+	"github.com/pion/webrtc/v3"
 )
 
 func main() {
@@ -20,6 +23,8 @@ func main() {
 		MessageChan: make(chan wsclient.EventMessage),
 		ErrorChan:   make(chan error),
 	}
+
+	p := p2p.WebRTCManager{}
 
 	ws, err := c.Connect()
 	if err != nil {
@@ -53,6 +58,25 @@ func main() {
 		select {
 		case msg := <-c.MessageChan:
 			fmt.Printf("\n[RECV] %s: %s\n> ", msg.Type, msg.Message)
+			switch msg.Type {
+			case "offer":
+				var offer webrtc.SessionDescription
+				json.Unmarshal(msg.Data, &offer)
+
+				p.StartWebRTC(&c) // Make sure engine is running
+				p.HandleOffer(&c, offer.SDP)
+
+			case "answer":
+				var answer webrtc.SessionDescription
+				json.Unmarshal(msg.Data, &answer)
+
+				p.HandleAnswer(answer.SDP)
+
+			case "candidate":
+				var candidate webrtc.ICECandidateInit
+				json.Unmarshal(msg.Data, &candidate)
+				p.PC.AddICECandidate(candidate)
+			}
 
 		case err := <-c.ErrorChan:
 			log.Fatalf("\nFatal Network Error: %v", err)

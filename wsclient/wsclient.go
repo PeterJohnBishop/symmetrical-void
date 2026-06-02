@@ -19,8 +19,9 @@ type ConnectionManager struct {
 }
 
 type EventMessage struct {
-	Type    string `json:"type"`
-	Message string `json:"message"`
+	Type    string          `json:"type"`
+	Message string          `json:"message"`
+	Data    json.RawMessage `json:"data,omitempty"`
 }
 
 func (c *ConnectionManager) Connect() (*websocket.Conn, error) {
@@ -55,20 +56,26 @@ func (c *ConnectionManager) StartListening() {
 			log.Printf("[WARN] Received non-JSON or invalid message: %s", string(rawMsg))
 			continue
 		}
-
 		c.MessageChan <- msg
 	}
 }
 
-func (c *ConnectionManager) SendEventMessage(eventType string, msgContent string) {
+func (c *ConnectionManager) SendEventMessage(eventType string, msgContent string, rawData ...json.RawMessage) {
 	event := EventMessage{
 		Type:    eventType,
 		Message: msgContent,
 	}
 
-	err := c.Conn.WriteJSON(event)
-	if err != nil {
-		c.ErrorChan <- err
+	if len(rawData) > 0 {
+		event.Data = rawData[0]
 	}
 
+	err := c.Conn.WriteJSON(event)
+	if err != nil {
+		select {
+		case c.ErrorChan <- err:
+		default:
+			log.Printf("[ERROR] Failed to send error: %v", err)
+		}
+	}
 }
