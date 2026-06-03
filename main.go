@@ -1,12 +1,10 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/joho/godotenv"
 	"github.com/peterjohnbishop/symmetrical-void/p2p"
@@ -14,6 +12,9 @@ import (
 	"github.com/pion/webrtc/v3"
 )
 
+// establishes the connection to the websocket server,
+// initializes the WebRTC PeerConnection,
+// starts listening for and facilitates WebRTC handshake events
 func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Print("No .env file found, relying on system environment variables")
@@ -24,11 +25,6 @@ func main() {
 		ErrorChan:   make(chan error),
 	}
 
-	p := p2p.WebRTCManager{
-		WC: &c,
-	}
-	p.StartWebRTC()
-
 	ws, err := c.Connect()
 	if err != nil {
 		log.Fatalf("Fatal: Could not connect to server: %v", err)
@@ -36,44 +32,47 @@ func main() {
 	c.Conn = ws
 	defer c.Conn.Close()
 
-	log.Println("Connected to the websocket server")
-	log.Println("Type a message and press Enter to broadcast. (Type 'quit' to exit)")
+	p := p2p.WebRTCManager{
+		WC: &c,
+	}
+
+	p.StartWebRTC()
 
 	go c.StartListening()
 
-	go func() {
-		reader := bufio.NewReader(os.Stdin)
-		for {
-			text, _ := reader.ReadString('\n')
-			text = strings.TrimSpace(text)
+	var availablePeers []string
 
-			if text == "quit" {
-				os.Exit(0)
-			}
+	deviceName, err := os.Hostname()
+	if err != nil {
+		log.Fatalf("Failed to read device name: %v", err)
+	}
+	msg := fmt.Sprintf("[CONN] %s connected to the Websocket Server", deviceName)
+	c.ID = deviceName
 
-			if text != "" {
-				c.SendEventMessage("broadcast", text)
-			}
-		}
-	}()
+	go c.SendEventMessage("connect", msg, nil, nil)
 
 	for {
 		select {
 		case msg := <-c.MessageChan:
-			fmt.Printf("\n[RECV] %s: %s\n> ", msg.Type, msg.Message)
+			fmt.Printf("\n[RECV] %s from %s: %s\n> ", msg.Type, msg.Sender, msg.Message)
 			switch msg.Type {
+			case "connect":
+				if msg.Sender != c.ID && msg.Sender != "" {
+					availablePeers = append(availablePeers, msg.Sender)
+					log.Printf("%s\n", msg.Message)
+					log.Printf("Device added: %s. Total peers: %d", msg.Sender, len(availablePeers))
+				}
 			case "offer":
 				var offer webrtc.SessionDescription
 				json.Unmarshal(msg.Data, &offer)
 				if p.WC == nil {
 					p.StartWebRTC()
 				}
-				p.HandleOffer(offer.SDP)
+				p.HandleOffer(msg.Sender, offer.SDP)
 
 			case "answer":
 				var answer webrtc.SessionDescription
 				json.Unmarshal(msg.Data, &answer)
-
 				p.HandleAnswer(answer.SDP)
 
 			case "candidate":

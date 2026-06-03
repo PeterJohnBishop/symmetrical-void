@@ -16,10 +16,13 @@ type ConnectionManager struct {
 	Err         error
 	MessageChan chan EventMessage
 	ErrorChan   chan error
+	ID          string
 }
 
 type EventMessage struct {
 	Type    string          `json:"type"`
+	Sender  string          `json:"sender"`
+	Target  string          `json:"target,omitempty"`
 	Message string          `json:"message"`
 	Data    json.RawMessage `json:"data,omitempty"`
 }
@@ -38,6 +41,9 @@ func (c *ConnectionManager) Connect() (*websocket.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	log.Println("Connected to the websocket server")
+
 	return conn, nil
 }
 
@@ -60,10 +66,12 @@ func (c *ConnectionManager) StartListening() {
 	}
 }
 
-func (c *ConnectionManager) SendEventMessage(eventType string, msgContent string, rawData ...json.RawMessage) {
+func (c *ConnectionManager) SendEventMessage(eventType string, msgContent string, target *string, rawData ...json.RawMessage) {
 	event := EventMessage{
 		Type:    eventType,
 		Message: msgContent,
+		Sender:  c.ID,
+		Target:  *target,
 	}
 
 	if len(rawData) > 0 {

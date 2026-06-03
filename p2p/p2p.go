@@ -55,14 +55,16 @@ func (m *WebRTCManager) StartWebRTC() error {
 				return
 			}
 
-			m.WC.SendEventMessage("candidate", "ICE Candidate", candidateBytes)
+			m.WC.SendEventMessage("candidate", "ICE Candidate", nil, candidateBytes)
 		}
 	})
+
+	log.Println("WebRTC is ready to connect. Searching for ICE candidates...")
 
 	return nil
 }
 
-func (m *WebRTCManager) SendOffer() error {
+func (m *WebRTCManager) SendOffer(target string) error {
 	if m.PC == nil {
 		return fmt.Errorf("peer connection is nil. Call StartWebRTC first")
 	}
@@ -81,13 +83,13 @@ func (m *WebRTCManager) SendOffer() error {
 		return fmt.Errorf("failed to marshal offer: %w", err)
 	}
 
-	m.WC.SendEventMessage("offer", "WebRTC Offer", offerBytes)
+	m.WC.SendEventMessage("offer", "WebRTC Offer", &target, offerBytes)
 
 	log.Println("Outbound offer generated and sent to signaling server")
 	return nil
 }
 
-func (m *WebRTCManager) HandleOffer(remoteSDP string) error {
+func (m *WebRTCManager) HandleOffer(sender string, remoteSDP string) error {
 	if m.PC == nil {
 		return fmt.Errorf("peer connection not initialized")
 	}
@@ -111,7 +113,7 @@ func (m *WebRTCManager) HandleOffer(remoteSDP string) error {
 
 	// send answer
 	answerBytes, _ := json.Marshal(answer)
-	m.WC.SendEventMessage("answer", "WebRTC Answer", answerBytes)
+	m.WC.SendEventMessage("answer", "WebRTC Answer", &sender, answerBytes)
 
 	log.Println("Offer accepted. Outbound answer sent.")
 	return nil
