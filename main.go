@@ -24,7 +24,10 @@ func main() {
 		ErrorChan:   make(chan error),
 	}
 
-	p := p2p.WebRTCManager{}
+	p := p2p.WebRTCManager{
+		WC: &c,
+	}
+	p.StartWebRTC()
 
 	ws, err := c.Connect()
 	if err != nil {
@@ -62,9 +65,10 @@ func main() {
 			case "offer":
 				var offer webrtc.SessionDescription
 				json.Unmarshal(msg.Data, &offer)
-
-				p.StartWebRTC(&c) // Make sure engine is running
-				p.HandleOffer(&c, offer.SDP)
+				if p.WC == nil {
+					p.StartWebRTC()
+				}
+				p.HandleOffer(offer.SDP)
 
 			case "answer":
 				var answer webrtc.SessionDescription

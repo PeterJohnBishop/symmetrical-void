@@ -12,9 +12,14 @@ import (
 type WebRTCManager struct {
 	PC *webrtc.PeerConnection
 	DC *webrtc.DataChannel
+	WC *wsclient.ConnectionManager
 }
 
-func (m *WebRTCManager) StartWebRTC(c *wsclient.ConnectionManager) error {
+func (m *WebRTCManager) StartWebRTC() error {
+	if m.WC == nil {
+		return fmt.Errorf("Connection manager must be initialized.")
+	}
+
 	config := webrtc.Configuration{
 		ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302"}}},
 	}
@@ -50,14 +55,14 @@ func (m *WebRTCManager) StartWebRTC(c *wsclient.ConnectionManager) error {
 				return
 			}
 
-			c.SendEventMessage("candidate", "ICE Candidate", candidateBytes)
+			m.WC.SendEventMessage("candidate", "ICE Candidate", candidateBytes)
 		}
 	})
 
 	return nil
 }
 
-func (m *WebRTCManager) SendOffer(c *wsclient.ConnectionManager) error {
+func (m *WebRTCManager) SendOffer() error {
 	if m.PC == nil {
 		return fmt.Errorf("peer connection is nil. Call StartWebRTC first")
 	}
@@ -76,13 +81,13 @@ func (m *WebRTCManager) SendOffer(c *wsclient.ConnectionManager) error {
 		return fmt.Errorf("failed to marshal offer: %w", err)
 	}
 
-	c.SendEventMessage("offer", "WebRTC Offer", offerBytes)
+	m.WC.SendEventMessage("offer", "WebRTC Offer", offerBytes)
 
 	log.Println("Outbound offer generated and sent to signaling server")
 	return nil
 }
 
-func (m *WebRTCManager) HandleOffer(c *wsclient.ConnectionManager, remoteSDP string) error {
+func (m *WebRTCManager) HandleOffer(remoteSDP string) error {
 	if m.PC == nil {
 		return fmt.Errorf("peer connection not initialized")
 	}
@@ -106,7 +111,7 @@ func (m *WebRTCManager) HandleOffer(c *wsclient.ConnectionManager, remoteSDP str
 
 	// send answer
 	answerBytes, _ := json.Marshal(answer)
-	c.SendEventMessage("answer", "WebRTC Answer", answerBytes)
+	m.WC.SendEventMessage("answer", "WebRTC Answer", answerBytes)
 
 	log.Println("Offer accepted. Outbound answer sent.")
 	return nil
