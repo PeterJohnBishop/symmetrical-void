@@ -67,13 +67,17 @@ func (c *ConnectionManager) StartListening() {
 }
 
 func (c *ConnectionManager) SendEventMessage(eventType string, msgContent string, target *string, rawData ...json.RawMessage) {
+	var targetVal string
+	if target != nil {
+		targetVal = *target
+	}
+
 	event := EventMessage{
 		Type:    eventType,
 		Message: msgContent,
 		Sender:  c.ID,
-		Target:  *target,
+		Target:  targetVal,
 	}
-
 	if len(rawData) > 0 {
 		event.Data = rawData[0]
 	}
