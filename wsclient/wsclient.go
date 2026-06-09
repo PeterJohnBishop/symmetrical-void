@@ -27,6 +27,8 @@ type EventMessage struct {
 	Data    json.RawMessage `json:"data,omitempty"`
 }
 
+// NewConnectionManager creates a new ConnectionManager instance and
+// attempts to connect to the WebSocket server.
 func (c *ConnectionManager) Connect() (*websocket.Conn, error) {
 	host := os.Getenv("HOST")
 	if host == "" {
@@ -47,6 +49,8 @@ func (c *ConnectionManager) Connect() (*websocket.Conn, error) {
 	return conn, nil
 }
 
+// StartListening continuously reads messages from the WebSocket
+// connection and sends them to the MessageChan.
 func (c *ConnectionManager) StartListening() {
 	defer close(c.MessageChan)
 
@@ -66,6 +70,7 @@ func (c *ConnectionManager) StartListening() {
 	}
 }
 
+// SendEventMessage sends a structured event message to the WebSocket server.
 func (c *ConnectionManager) SendEventMessage(eventType string, msgContent string, target *string, rawData ...json.RawMessage) {
 	var targetVal string
 	if target != nil {

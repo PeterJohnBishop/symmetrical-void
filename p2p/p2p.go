@@ -15,6 +15,8 @@ type WebRTCManager struct {
 	WC *wsclient.ConnectionManager
 }
 
+// StartWebRTC initializes the WebRTC peer connection and data channel,
+// and sets up event handlers for ICE candidates and incoming messages.
 func (m *WebRTCManager) StartWebRTC() error {
 	if m.WC == nil {
 		return fmt.Errorf("Connection manager must be initialized.")
@@ -64,6 +66,9 @@ func (m *WebRTCManager) StartWebRTC() error {
 	return nil
 }
 
+// SendOffer creates a WebRTC offer, sets it as the local description,
+// and sends it to the signaling server to initiate a P2P connection
+// with the target peer.
 func (m *WebRTCManager) SendOffer(target string) error {
 	if m.PC == nil {
 		return fmt.Errorf("peer connection is nil. Call StartWebRTC first")
@@ -89,6 +94,9 @@ func (m *WebRTCManager) SendOffer(target string) error {
 	return nil
 }
 
+// HandleOffer processes an incoming WebRTC offer from a remote peer,
+// sets it as the remote description, generates an answer, and sends
+// the answer back to the signaling server to complete the handshake.
 func (m *WebRTCManager) HandleOffer(sender string, remoteSDP string) error {
 	if m.PC == nil {
 		return fmt.Errorf("peer connection not initialized")
@@ -119,6 +127,8 @@ func (m *WebRTCManager) HandleOffer(sender string, remoteSDP string) error {
 	return nil
 }
 
+// HandleAnswer processes an incoming WebRTC answer from a remote peer,
+// sets it as the remote description, and completes the handshake.
 func (m *WebRTCManager) HandleAnswer(remoteSDP string) error {
 	if m.PC == nil {
 		return fmt.Errorf("peer connection not initialized")
@@ -134,7 +144,7 @@ func (m *WebRTCManager) HandleAnswer(remoteSDP string) error {
 	return nil
 }
 
-// send text message
+// SendTextMessage sends a text message through the data channel.
 func (m *WebRTCManager) SendTextMessage(text string) error {
 	if m.DC == nil || m.DC.ReadyState() != webrtc.DataChannelStateOpen {
 		return fmt.Errorf("data channel is not open")
@@ -144,7 +154,7 @@ func (m *WebRTCManager) SendTextMessage(text string) error {
 	return m.DC.SendText(text)
 }
 
-// send []byte data
+// SendBinaryData sends []byte data through the data channel.
 func (m *WebRTCManager) SendBinaryData(data []byte) error {
 	if m.DC == nil || m.DC.ReadyState() != webrtc.DataChannelStateOpen {
 		return fmt.Errorf("data channel is not open")

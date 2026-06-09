@@ -12,9 +12,8 @@ import (
 	"github.com/pion/webrtc/v3"
 )
 
-// establishes the connection to the websocket server,
-// initializes the WebRTC PeerConnection,
-// starts listening for and facilitates WebRTC handshake events
+// This is the main entry point for the Symmetrical Void application.
+// It initializes the WebSocket connection,
 func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Print("No .env file found, relying on system environment variables")
