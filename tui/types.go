@@ -1,7 +1,7 @@
 package tui
 
-type connectedMsg struct {
-	Type string
-}
+type connectedMsg struct{}
 
-type peersMsg []string
+type errMsg struct{ err error }
+
+type logMsg string

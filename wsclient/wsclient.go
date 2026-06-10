@@ -3,7 +3,6 @@ package wsclient
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/url"
 	"os"
 	"strings"
@@ -27,8 +26,7 @@ type EventMessage struct {
 	Data    json.RawMessage `json:"data,omitempty"`
 }
 
-// NewConnectionManager creates a new ConnectionManager instance and
-// attempts to connect to the WebSocket server.
+// Connect establishes a WebSocket connection to the signaling server using the host specified in the environment variable or defaults to localhost:8080. It returns the established connection or an error if the connection fails.
 func (c *ConnectionManager) Connect() (*websocket.Conn, error) {
 	host := os.Getenv("HOST")
 	if host == "" {
@@ -43,14 +41,10 @@ func (c *ConnectionManager) Connect() (*websocket.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	log.Println("Connected to the websocket server")
-
 	return conn, nil
 }
 
-// StartListening continuously reads messages from the WebSocket
-// connection and sends them to the MessageChan.
+// StartListening continuously reads messages from the WebSocket connection and sends them to the MessageChan. If an error occurs while reading, it sends the error to the ErrorChan and exits.
 func (c *ConnectionManager) StartListening() {
 	defer close(c.MessageChan)
 
@@ -63,14 +57,14 @@ func (c *ConnectionManager) StartListening() {
 
 		var msg EventMessage
 		if err := json.Unmarshal(rawMsg, &msg); err != nil {
-			log.Printf("[WARN] Received non-JSON or invalid message: %s", string(rawMsg))
+			c.ErrorChan <- fmt.Errorf("failed to unmarshal message: %w", err)
 			continue
 		}
 		c.MessageChan <- msg
 	}
 }
 
-// SendEventMessage sends a structured event message to the WebSocket server.
+// SendEventMessage sends an event message with the specified type, content, target, and optional raw data over the WebSocket connection. If an error occurs while sending, it sends the error to the ErrorChan.
 func (c *ConnectionManager) SendEventMessage(eventType string, msgContent string, target *string, rawData ...json.RawMessage) {
 	var targetVal string
 	if target != nil {
@@ -92,7 +86,7 @@ func (c *ConnectionManager) SendEventMessage(eventType string, msgContent string
 		select {
 		case c.ErrorChan <- err:
 		default:
-			log.Printf("[ERROR] Failed to send error: %v", err)
+			c.ErrorChan <- fmt.Errorf("[ERROR] Failed to send error: %v", err)
 		}
 	}
 }

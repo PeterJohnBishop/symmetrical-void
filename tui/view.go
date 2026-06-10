@@ -1,8 +1,13 @@
 package tui
 
-import "fmt"
+import (
+	"fmt"
 
-func (m Model) View() string {
+	tea "charm.land/bubbletea/v2"
+)
+
+// View renders the TUI view based on the current model state, displaying the connection status of the WebSocket server and WebRTC connection, as well as a list of available peers.
+func (m Model) View() tea.View {
 	wsStatus := "Disconnected"
 	if m.wsServerConnected {
 		wsStatus = "Connected"
@@ -20,5 +25,5 @@ func (m Model) View() string {
 	for _, peer := range m.availablePeers {
 		view += fmt.Sprintf("- %s\n", peer)
 	}
-	return view
+	return tea.NewView(view)
 }

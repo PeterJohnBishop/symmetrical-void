@@ -3,23 +3,30 @@ package p2p
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/peterjohnbishop/symmetrical-void/wsclient"
 	"github.com/pion/webrtc/v3"
 )
 
 type WebRTCManager struct {
-	PC *webrtc.PeerConnection
-	DC *webrtc.DataChannel
-	WC *wsclient.ConnectionManager
+	PC         *webrtc.PeerConnection
+	DC         *webrtc.DataChannel
+	WC         *wsclient.ConnectionManager
+	StatusChan chan string
+}
+
+// sendStatus is a helper method to send status updates to the TUI via the StatusChan.
+func (m *WebRTCManager) sendStatus(msg string) {
+	if m.StatusChan != nil {
+		m.StatusChan <- msg
+	}
 }
 
 // StartWebRTC initializes the WebRTC peer connection and data channel,
 // and sets up event handlers for ICE candidates and incoming messages.
 func (m *WebRTCManager) StartWebRTC() error {
 	if m.WC == nil {
-		return fmt.Errorf("Connection manager must be initialized.")
+		return fmt.Errorf("connection manager must be initialized")
 	}
 
 	config := webrtc.Configuration{
@@ -36,15 +43,14 @@ func (m *WebRTCManager) StartWebRTC() error {
 	if err != nil {
 		return fmt.Errorf("failed to create data channel: %w", err)
 	}
-
 	m.DC = dc
 
 	dc.OnOpen(func() {
-		log.Println("Data channel is open!")
+		m.sendStatus("Data channel is open!")
 	})
 
 	dc.OnMessage(func(msg webrtc.DataChannelMessage) {
-		log.Printf("Received: %s", string(msg.Data))
+		m.sendStatus(fmt.Sprintf("Received: %s", string(msg.Data)))
 	})
 
 	m.PC.OnICECandidate(func(candidate *webrtc.ICECandidate) {
@@ -53,7 +59,7 @@ func (m *WebRTCManager) StartWebRTC() error {
 
 			candidateBytes, err := json.Marshal(candidateJSON)
 			if err != nil {
-				log.Println("Failed to marshal ICE candidate:", err)
+				m.sendStatus(fmt.Sprintf("Failed to marshal ICE candidate: %v", err))
 				return
 			}
 
@@ -61,14 +67,11 @@ func (m *WebRTCManager) StartWebRTC() error {
 		}
 	})
 
-	log.Println("WebRTC is ready to connect. Searching for ICE candidates...")
-
+	m.sendStatus("WebRTC is ready to connect. Searching for ICE candidates...")
 	return nil
 }
 
-// SendOffer creates a WebRTC offer, sets it as the local description,
-// and sends it to the signaling server to initiate a P2P connection
-// with the target peer.
+// SendOffer creates a WebRTC offer and sends it to the specified target via the signaling server.
 func (m *WebRTCManager) SendOffer(target string) error {
 	if m.PC == nil {
 		return fmt.Errorf("peer connection is nil. Call StartWebRTC first")
@@ -90,45 +93,38 @@ func (m *WebRTCManager) SendOffer(target string) error {
 
 	m.WC.SendEventMessage("offer", "WebRTC Offer", &target, offerBytes)
 
-	log.Println("Outbound offer generated and sent to signaling server")
+	m.sendStatus("Outbound offer generated and sent to signaling server")
 	return nil
 }
 
-// HandleOffer processes an incoming WebRTC offer from a remote peer,
-// sets it as the remote description, generates an answer, and sends
-// the answer back to the signaling server to complete the handshake.
+// HandleOffer processes an incoming WebRTC offer, sets the remote description,
 func (m *WebRTCManager) HandleOffer(sender string, remoteSDP string) error {
 	if m.PC == nil {
 		return fmt.Errorf("peer connection not initialized")
 	}
 
-	// apply offer
 	offer := webrtc.SessionDescription{Type: webrtc.SDPTypeOffer, SDP: remoteSDP}
 	if err := m.PC.SetRemoteDescription(offer); err != nil {
 		return fmt.Errorf("failed to set remote description: %w", err)
 	}
 
-	// generate answer
 	answer, err := m.PC.CreateAnswer(nil)
 	if err != nil {
 		return fmt.Errorf("failed to create answer: %w", err)
 	}
 
-	// apply answer
 	if err := m.PC.SetLocalDescription(answer); err != nil {
 		return fmt.Errorf("failed to set local description: %w", err)
 	}
 
-	// send answer
 	answerBytes, _ := json.Marshal(answer)
 	m.WC.SendEventMessage("answer", "WebRTC Answer", &sender, answerBytes)
 
-	log.Println("Offer accepted. Outbound answer sent.")
+	m.sendStatus("Offer accepted. Outbound answer sent.")
 	return nil
 }
 
-// HandleAnswer processes an incoming WebRTC answer from a remote peer,
-// sets it as the remote description, and completes the handshake.
+// HandleAnswer processes an incoming WebRTC answer and sets it as the remote description to complete the handshake.
 func (m *WebRTCManager) HandleAnswer(remoteSDP string) error {
 	if m.PC == nil {
 		return fmt.Errorf("peer connection not initialized")
@@ -140,26 +136,26 @@ func (m *WebRTCManager) HandleAnswer(remoteSDP string) error {
 		return fmt.Errorf("failed to apply remote answer: %w", err)
 	}
 
-	log.Println("Handshake complete for P2P tunnel.")
+	m.sendStatus("Handshake complete for P2P tunnel.")
 	return nil
 }
 
-// SendTextMessage sends a text message through the data channel.
+// SentTextMessage sends a text message over the established WebRTC data channel.
 func (m *WebRTCManager) SendTextMessage(text string) error {
 	if m.DC == nil || m.DC.ReadyState() != webrtc.DataChannelStateOpen {
 		return fmt.Errorf("data channel is not open")
 	}
 
-	log.Printf("[TEXT] -> %s", text)
+	m.sendStatus(fmt.Sprintf("[TEXT] -> %s", text))
 	return m.DC.SendText(text)
 }
 
-// SendBinaryData sends []byte data through the data channel.
+// SendBinaryData sends binary data over the established WebRTC data channel.
 func (m *WebRTCManager) SendBinaryData(data []byte) error {
 	if m.DC == nil || m.DC.ReadyState() != webrtc.DataChannelStateOpen {
 		return fmt.Errorf("data channel is not open")
 	}
 
-	log.Printf("[BINARY] -> Sending %d bytes", len(data))
+	m.sendStatus(fmt.Sprintf("[BINARY] -> Sending %d bytes", len(data)))
 	return m.DC.Send(data)
 }
