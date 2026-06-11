@@ -15,6 +15,7 @@ type Model struct {
 	wsServerConnected   bool
 	webRTCConnected     bool
 	availablePeers      []string
+	cursor              int
 	err                 error
 }
 
@@ -26,6 +27,7 @@ func InitialModel(wsConnManager *wsclient.ConnectionManager, webRTCManager *p2p.
 		wsServerConnected:   false,
 		webRTCConnected:     false,
 		availablePeers:      []string{},
+		cursor:              0,
 	}
 }
 
@@ -72,4 +74,14 @@ func (m Model) listenForMessages() tea.Cmd {
 			return logMsg(status)
 		}
 	}
+}
+
+// helper to check if a peer id already exists
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
 }

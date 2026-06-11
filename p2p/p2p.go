@@ -159,3 +159,16 @@ func (m *WebRTCManager) SendBinaryData(data []byte) error {
 	m.sendStatus(fmt.Sprintf("[BINARY] -> Sending %d bytes", len(data)))
 	return m.DC.Send(data)
 }
+
+// Disconnect safely closes the WebRTC connection and Data Channel
+func (m *WebRTCManager) Disconnect() {
+	if m.DC != nil {
+		m.DC.Close()
+	}
+	if m.PC != nil {
+		m.PC.Close()
+	}
+	m.PC = nil
+	m.DC = nil
+	m.sendStatus("WebRTC connection closed")
+}

@@ -18,7 +18,30 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.wsConnectionManager.Conn != nil {
 				m.wsConnectionManager.Conn.Close()
 			}
+			if m.webRTCConnected {
+				m.webRTCManager.Disconnect()
+			}
 			return m, tea.Quit
+
+		case "up", "k":
+			if m.cursor > 0 {
+				m.cursor--
+			}
+
+		case "down", "j":
+			if m.cursor < len(m.availablePeers)-1 {
+				m.cursor++
+			}
+
+		case " ": // Spacebar
+			if len(m.availablePeers) > 0 {
+				if m.webRTCConnected {
+					m.webRTCManager.Disconnect()
+				} else {
+					target := m.availablePeers[m.cursor]
+					go m.webRTCManager.SendOffer(target)
+				}
+			}
 		}
 
 	case connectedMsg:
@@ -35,7 +58,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.Type {
 		case "connect":
 			if msg.Sender != m.wsConnectionManager.ID && msg.Sender != "" {
-				m.availablePeers = append(m.availablePeers, msg.Sender)
+				if !contains(m.availablePeers, msg.Sender) {
+					m.availablePeers = append(m.availablePeers, msg.Sender)
+					target := msg.Sender
+					go m.wsConnectionManager.SendEventMessage("presence", "I'm availible for connection", &target, nil)
+				}
+			}
+
+		case "presence":
+			if msg.Sender != m.wsConnectionManager.ID && msg.Sender != "" {
+				if !contains(m.availablePeers, msg.Sender) {
+					m.availablePeers = append(m.availablePeers, msg.Sender)
+				}
 			}
 		case "offer":
 			var offer webrtc.SessionDescription
