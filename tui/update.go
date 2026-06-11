@@ -97,21 +97,46 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "offer":
 			var offer webrtc.SessionDescription
-			json.Unmarshal(msg.Data, &offer)
-			if m.webRTCManager.WC == nil {
-				m.webRTCManager.StartWebRTC()
+			if err := json.Unmarshal(msg.Data, &offer); err != nil {
+				m.logs = append(m.logs, "Failed to parse incoming offer: "+err.Error())
+			} else {
+				// Instantly log that we heard the other computer!
+				m.logs = append(m.logs, fmt.Sprintf("Received offer from %s! Generating answer...", msg.Sender))
+
+				// Process the offer in the background and catch errors
+				go func() {
+					err := m.webRTCManager.HandleOffer(msg.Sender, offer.SDP)
+					if err != nil {
+						m.webRTCManager.StatusChan <- "Handle Offer Error: " + err.Error()
+					}
+				}()
 			}
-			m.webRTCManager.HandleOffer(msg.Sender, offer.SDP)
 
 		case "answer":
 			var answer webrtc.SessionDescription
-			json.Unmarshal(msg.Data, &answer)
-			m.webRTCManager.HandleAnswer(answer.SDP)
+			if err := json.Unmarshal(msg.Data, &answer); err != nil {
+				m.logs = append(m.logs, "Failed to parse incoming answer: "+err.Error())
+			} else {
+				m.logs = append(m.logs, "Received answer! Completing handshake...")
+
+				go func() {
+					err := m.webRTCManager.HandleAnswer(answer.SDP)
+					if err != nil {
+						m.webRTCManager.StatusChan <- "Handle Answer Error: " + err.Error()
+					}
+				}()
+			}
 
 		case "candidate":
 			var candidate webrtc.ICECandidateInit
-			json.Unmarshal(msg.Data, &candidate)
-			m.webRTCManager.PC.AddICECandidate(candidate)
+			if err := json.Unmarshal(msg.Data, &candidate); err != nil {
+				m.logs = append(m.logs, "Failed to parse ICE candidate: "+err.Error())
+			} else {
+				m.logs = append(m.logs, "Received ICE candidate from peer.")
+				if m.webRTCManager.PC != nil {
+					m.webRTCManager.PC.AddICECandidate(candidate)
+				}
+			}
 		}
 
 		return m, m.listenForMessages()
