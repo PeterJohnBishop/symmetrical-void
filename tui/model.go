@@ -17,6 +17,7 @@ type Model struct {
 	availablePeers      []string
 	cursor              int
 	err                 error
+	logs                []string
 }
 
 // InitialModel creates and returns the initial TUI model with the provided WebSocket connection manager and WebRTC manager.
@@ -28,6 +29,7 @@ func InitialModel(wsConnManager *wsclient.ConnectionManager, webRTCManager *p2p.
 		webRTCConnected:     false,
 		availablePeers:      []string{},
 		cursor:              0,
+		logs:                []string{"App started. Waiting for connections..."},
 	}
 }
 

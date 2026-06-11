@@ -45,5 +45,10 @@ func (m Model) View() tea.View {
 		view += "\n  [ q/ctrl+c: quit ]\n"
 	}
 
+	view += "\n--- Activity Log ---\n"
+	for _, logItem := range m.logs {
+		view += fmt.Sprintf(" > %s\n", logItem)
+	}
+
 	return tea.NewView(view)
 }

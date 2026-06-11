@@ -2,6 +2,7 @@ package tui
 
 import (
 	"encoding/json"
+	"fmt"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/peterjohnbishop/symmetrical-void/wsclient"
@@ -33,13 +34,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor++
 			}
 
-		case " ": // Spacebar
+		case " ": // space bar
 			if len(m.availablePeers) > 0 {
 				if m.webRTCConnected {
 					m.webRTCManager.Disconnect()
 				} else {
 					target := m.availablePeers[m.cursor]
-					go m.webRTCManager.SendOffer(target)
+
+					m.logs = append(m.logs, fmt.Sprintf("Initiating connection to %s...", target))
+
+					go func() {
+						err := m.webRTCManager.SendOffer(target)
+						if err != nil {
+							m.webRTCManager.StatusChan <- "Offer Error: " + err.Error()
+						}
+					}()
 				}
 			}
 		}
@@ -52,6 +61,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.err = msg.err
 		return m, tea.Quit
 	case logMsg:
+		msgStr := string(msg)
+
+		m.logs = append(m.logs, msgStr)
+		if len(m.logs) > 5 {
+			m.logs = m.logs[1:]
+		}
+
+		if msgStr == "Data channel is open!" {
+			m.webRTCConnected = true
+		}
+		if msgStr == "WebRTC connection closed" {
+			m.webRTCConnected = false
+		}
 		return m, m.listenForMessages()
 
 	case wsclient.EventMessage:
