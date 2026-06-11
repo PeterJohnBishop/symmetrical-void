@@ -34,8 +34,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor++
 			}
 
-		case " ": // space bar
-			if len(m.availablePeers) > 0 {
+		case " ", "enter":
+			if len(m.availablePeers) == 0 {
+				m.logs = append(m.logs, "Spacebar pressed, but no peers are in the list!")
+			} else {
 				if m.webRTCConnected {
 					m.webRTCManager.Disconnect()
 				} else {
