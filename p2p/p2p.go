@@ -18,7 +18,10 @@ type WebRTCManager struct {
 // sendStatus is a helper method to send status updates to the TUI via the StatusChan.
 func (m *WebRTCManager) sendStatus(msg string) {
 	if m.StatusChan != nil {
-		m.StatusChan <- msg
+		select {
+		case m.StatusChan <- msg:
+		default:
+		}
 	}
 }
 

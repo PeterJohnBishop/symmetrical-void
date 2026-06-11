@@ -20,7 +20,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.wsConnectionManager.Conn.Close()
 			}
 			if m.webRTCConnected {
-				m.webRTCManager.Disconnect()
+				go m.webRTCManager.Disconnect()
 			}
 			return m, tea.Quit
 
@@ -39,10 +39,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.logs = append(m.logs, "Spacebar pressed, but no peers are in the list!")
 			} else {
 				if m.webRTCConnected {
-					m.webRTCManager.Disconnect()
+					go m.webRTCManager.Disconnect()
+					m.activePeer = ""
+					m.logs = append(m.logs, "Disconnected from peer.")
+					return m, nil
 				} else {
 					target := m.availablePeers[m.cursor]
-
+					m.activePeer = target
 					m.logs = append(m.logs, fmt.Sprintf("Initiating connection to %s...", target))
 
 					go func() {
@@ -75,6 +78,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if msgStr == "WebRTC connection closed" {
 			m.webRTCConnected = false
+			m.activePeer = ""
 		}
 		return m, m.listenForMessages()
 
@@ -100,10 +104,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if err := json.Unmarshal(msg.Data, &offer); err != nil {
 				m.logs = append(m.logs, "Failed to parse incoming offer: "+err.Error())
 			} else {
-				// Instantly log that we heard the other computer!
 				m.logs = append(m.logs, fmt.Sprintf("Received offer from %s! Generating answer...", msg.Sender))
-
-				// Process the offer in the background and catch errors
+				m.activePeer = msg.Sender
 				go func() {
 					err := m.webRTCManager.HandleOffer(msg.Sender, offer.SDP)
 					if err != nil {

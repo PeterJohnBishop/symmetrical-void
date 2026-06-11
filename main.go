@@ -24,7 +24,7 @@ func main() {
 
 	p := p2p.WebRTCManager{
 		WC:         &c,
-		StatusChan: make(chan string),
+		StatusChan: make(chan string, 100),
 	}
 
 	m := tui.InitialModel(&c, &p)

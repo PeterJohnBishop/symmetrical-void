@@ -35,7 +35,11 @@ func (m Model) View() tea.View {
 			if m.cursor == i {
 				cursor = ">"
 			}
-			view += fmt.Sprintf("%s %s\n", cursor, peer)
+			if m.webRTCConnected && peer == m.activePeer {
+				view += fmt.Sprintf("%s %s ✔\n", cursor, peer)
+			} else {
+				view += fmt.Sprintf("%s %s\n", cursor, peer)
+			}
 		}
 	}
 
