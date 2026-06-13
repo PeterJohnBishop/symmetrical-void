@@ -3,6 +3,7 @@ package tui
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/peterjohnbishop/symmetrical-void/wsclient"
@@ -73,7 +74,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.logs = m.logs[1:]
 		}
 
-		if msgStr == "Data channel is open!" {
+		if strings.HasPrefix(msgStr, "Data channel is open!") {
 			m.webRTCConnected = true
 		}
 		if msgStr == "WebRTC connection closed" {
