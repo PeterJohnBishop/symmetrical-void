@@ -53,15 +53,17 @@ func (m *WebRTCManager) StartWebRTC() error {
 
 	dc.OnOpen(func() {
 		m.sendStatus("Data channel is open! Starting ASCII stream...")
-		go m.StreamASCII() // start streaming!
+		go m.StreamASCII()
 	})
 
 	dc.OnMessage(func(msg webrtc.DataChannelMessage) {
 		if m.RemoteFrameChan != nil {
-			m.RemoteFrameChan <- string(msg.Data)
+			select {
+			case m.RemoteFrameChan <- string(msg.Data):
+			default:
+			}
 		}
 	})
-
 	m.PC.OnICECandidate(func(candidate *webrtc.ICECandidate) {
 		if candidate != nil {
 			candidateJSON := candidate.ToJSON()
@@ -83,6 +85,25 @@ func (m *WebRTCManager) StartWebRTC() error {
 			m.sendStatus("Peers connected! Video stream is being handled by mediadevices internally.")
 			// The manual loop has been entirely removed
 		}
+	})
+
+	m.PC.OnDataChannel(func(d *webrtc.DataChannel) {
+		m.sendStatus("Incoming data channel received from peer!")
+		m.DC = d
+
+		d.OnOpen(func() {
+			m.sendStatus("Data channel is open! Starting ASCII stream...")
+			go m.StreamASCII()
+		})
+
+		d.OnMessage(func(msg webrtc.DataChannelMessage) {
+			if m.RemoteFrameChan != nil {
+				select {
+				case m.RemoteFrameChan <- string(msg.Data):
+				default:
+				}
+			}
+		})
 	})
 
 	m.sendStatus("WebRTC is ready to connect. Searching for ICE candidates...")
