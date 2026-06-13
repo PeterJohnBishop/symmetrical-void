@@ -4,8 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 
+	// "time" and "github.com/pion/webrtc/v3/pkg/media" are no longer needed
+
+	"github.com/peterjohnbishop/symmetrical-void/cam"
 	"github.com/peterjohnbishop/symmetrical-void/wsclient"
-	"github.com/pion/webrtc/v3"
+	"github.com/pion/webrtc/v4" // Upgraded to v4 to match the cam package
 )
 
 type WebRTCManager struct {
@@ -15,7 +18,6 @@ type WebRTCManager struct {
 	StatusChan chan string
 }
 
-// sendStatus is a helper method to send status updates to the TUI via the StatusChan.
 func (m *WebRTCManager) sendStatus(msg string) {
 	if m.StatusChan != nil {
 		select {
@@ -25,8 +27,6 @@ func (m *WebRTCManager) sendStatus(msg string) {
 	}
 }
 
-// StartWebRTC initializes the WebRTC peer connection and data channel,
-// and sets up event handlers for ICE candidates and incoming messages.
 func (m *WebRTCManager) StartWebRTC() error {
 	if m.WC == nil {
 		return fmt.Errorf("connection manager must be initialized")
@@ -49,11 +49,12 @@ func (m *WebRTCManager) StartWebRTC() error {
 	m.DC = dc
 
 	dc.OnOpen(func() {
-		m.sendStatus("Data channel is open!")
+		m.sendStatus("Data channel is open! Starting ASCII stream...")
+		go m.StreamASCII() // start streaming!
 	})
 
 	dc.OnMessage(func(msg webrtc.DataChannelMessage) {
-		m.sendStatus(fmt.Sprintf("Received: %s", string(msg.Data)))
+		m.sendStatus(string(msg.Data)) // send the stream to the TUI
 	})
 
 	m.PC.OnICECandidate(func(candidate *webrtc.ICECandidate) {
@@ -67,6 +68,15 @@ func (m *WebRTCManager) StartWebRTC() error {
 			}
 
 			m.WC.SendEventMessage("candidate", "ICE Candidate", nil, candidateBytes)
+		}
+	})
+
+	m.PC.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
+		m.sendStatus(fmt.Sprintf("ICE Connection State has changed: %s", connectionState.String()))
+
+		if connectionState == webrtc.ICEConnectionStateConnected {
+			m.sendStatus("Peers connected! Video stream is being handled by mediadevices internally.")
+			// The manual loop has been entirely removed
 		}
 	})
 
@@ -174,4 +184,30 @@ func (m *WebRTCManager) Disconnect() {
 	m.PC = nil
 	m.DC = nil
 	m.sendStatus("WebRTC connection closed")
+}
+
+func (m *WebRTCManager) StreamASCII() {
+	reader, err := cam.StartRawCamera()
+	if err != nil {
+		m.sendStatus(fmt.Sprintf("Failed to start camera: %v", err))
+		return
+	}
+
+	for {
+		frame, release, err := reader.Read()
+		if err != nil {
+			m.sendStatus("Camera read error")
+			return
+		}
+
+		asciiString := cam.ConvertImageToASCII(frame)
+		err = m.DC.SendText(asciiString)
+
+		release()
+
+		if err != nil {
+			m.sendStatus("Failed to send ASCII frame, stopping stream.")
+			return
+		}
+	}
 }

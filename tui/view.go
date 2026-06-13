@@ -44,7 +44,7 @@ func (m Model) View() tea.View {
 	}
 
 	if len(m.availablePeers) > 0 {
-		view += "\n  [ space: connect/disconnect • up/down: select • q/ctrl+c: quit ]\n"
+		view += "\n  [ enter: connect/disconnect • up/down: select • q/ctrl+c: quit ]\n"
 	} else {
 		view += "\n  [ q/ctrl+c: quit ]\n"
 	}

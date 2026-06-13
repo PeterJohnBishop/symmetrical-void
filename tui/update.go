@@ -6,7 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/peterjohnbishop/symmetrical-void/wsclient"
-	"github.com/pion/webrtc/v3"
+	"github.com/pion/webrtc/v4"
 )
 
 // Update is the main update function for the TUI model. It handles various message types, including key presses, WebSocket connection events, and incoming WebRTC signaling messages, updating the model state accordingly.
@@ -34,9 +34,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor++
 			}
 
-		case " ", "enter":
+		case "enter":
 			if len(m.availablePeers) == 0 {
-				m.logs = append(m.logs, "Spacebar pressed, but no peers are in the list!")
+				m.logs = append(m.logs, "Enter pressed, but no peers are in the list!")
 			} else {
 				if m.webRTCConnected {
 					go m.webRTCManager.Disconnect()

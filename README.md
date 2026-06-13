@@ -32,3 +32,8 @@ I'm thinking a collaborative Markdown doc.
 https://github.com/PeterJohnBishop/pake
 PAKE library for generating a strong secret between parties over an insecure channel
 
+# Go Package to access my webcam
+https://github.com/pion/mediadevices
+
+# Go Package to convert frames to ASCII
+https://github.com/qeesung/image2ascii
