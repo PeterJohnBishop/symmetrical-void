@@ -213,6 +213,13 @@ func (m *WebRTCManager) StreamASCII() {
 
 		asciiString := converter.Image2ASCIIString(frame, &options)
 
+		if m.FrameChan != nil {
+			select {
+			case m.FrameChan <- asciiString:
+			default:
+			}
+		}
+
 		err = m.DC.SendText(asciiString)
 
 		release()

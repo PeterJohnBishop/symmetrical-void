@@ -49,14 +49,14 @@ func (m Model) View() tea.View {
 		view += "\n  [ q/ctrl+c: quit ]\n"
 	}
 
-	if m.webRTCConnected && m.currentFrame != "" {
-		view += "\n--- Live Feed ---\n"
-		view += m.currentFrame + "\n"
-	}
-
 	view += "\n--- Activity Log ---\n"
 	for _, logItem := range m.logs {
 		view += fmt.Sprintf(" > %s\n", logItem)
+	}
+
+	if m.webRTCConnected && m.currentFrame != "" {
+		view += "\n--- Live Feed ---\n"
+		view += m.currentFrame + "\n"
 	}
 
 	return tea.NewView(view)
