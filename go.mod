@@ -21,7 +21,7 @@ require (
 	github.com/pion/turn/v4 v4.1.3 // indirect
 	github.com/pion/webrtc/v4 v4.1.8 // indirect
 	github.com/wayneashleyberry/terminal-dimensions v1.1.0 // indirect
-	golang.org/x/image v0.23.0 // indirect
+	golang.org/x/image v0.42.0 // indirect
 )
 
 require (
