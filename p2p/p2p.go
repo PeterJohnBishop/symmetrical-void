@@ -3,14 +3,13 @@ package p2p
 import (
 	"encoding/json"
 	"fmt"
-	"image"
 
 	// "time" and "github.com/pion/webrtc/v3/pkg/media" are no longer needed
 
 	"github.com/peterjohnbishop/symmetrical-void/cam"
 	"github.com/peterjohnbishop/symmetrical-void/wsclient"
 	"github.com/pion/webrtc/v4" // Upgraded to v4 to match the cam package
-	"golang.org/x/image/draw"
+	"github.com/qeesung/image2ascii/convert"
 )
 
 type WebRTCManager struct {
@@ -198,6 +197,12 @@ func (m *WebRTCManager) StreamASCII() {
 		return
 	}
 
+	converter := convert.NewImageConverter()
+	options := convert.DefaultOptions
+	options.FixedWidth = 80
+	options.FixedHeight = 40
+	options.Colored = false
+
 	frameCount := 0
 	for {
 		frame, release, err := reader.Read()
@@ -206,12 +211,7 @@ func (m *WebRTCManager) StreamASCII() {
 			return
 		}
 
-		targetW, targetH := 80, 40
-		resizedFrame := image.NewRGBA(image.Rect(0, 0, targetW, targetH))
-
-		draw.ApproxBiLinear.Scale(resizedFrame, resizedFrame.Bounds(), frame, frame.Bounds(), draw.Over, nil)
-
-		asciiString := cam.ConvertImageToASCII(resizedFrame)
+		asciiString := converter.Image2ASCIIString(frame, &options)
 
 		err = m.DC.SendText(asciiString)
 
