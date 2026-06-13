@@ -8,6 +8,7 @@ require (
 )
 
 require (
+	charm.land/lipgloss/v2 v2.0.4 // indirect
 	github.com/aybabtme/rgbterm v0.0.0-20170906152045-cc83f3b3ce59 // indirect
 	github.com/blackjack/webcam v0.6.1 // indirect
 	github.com/mattn/go-isatty v0.0.22 // indirect

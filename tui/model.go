@@ -19,7 +19,8 @@ type Model struct {
 	err                 error
 	logs                []string
 	activePeer          string
-	currentFrame        string
+	localFrame          string
+	remoteFrame         string
 }
 
 // InitialModel creates and returns the initial TUI model with the provided WebSocket connection manager and WebRTC manager.
@@ -77,8 +78,11 @@ func (m Model) listenForMessages() tea.Cmd {
 			return errMsg{err}
 		case status := <-m.webRTCManager.StatusChan:
 			return logMsg(status)
-		case frame := <-m.webRTCManager.FrameChan:
-			return frameMsg(frame)
+		case frame := <-m.webRTCManager.LocalFrameChan:
+			return localFrameMsg(frame)
+		case frame := <-m.webRTCManager.RemoteFrameChan:
+			return remoteFrameMsg(frame)
+
 		}
 	}
 }

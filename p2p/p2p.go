@@ -13,11 +13,12 @@ import (
 )
 
 type WebRTCManager struct {
-	PC         *webrtc.PeerConnection
-	DC         *webrtc.DataChannel
-	WC         *wsclient.ConnectionManager
-	StatusChan chan string
-	FrameChan  chan string
+	PC              *webrtc.PeerConnection
+	DC              *webrtc.DataChannel
+	WC              *wsclient.ConnectionManager
+	StatusChan      chan string
+	LocalFrameChan  chan string // my camera
+	RemoteFrameChan chan string // peer's camera
 }
 
 func (m *WebRTCManager) sendStatus(msg string) {
@@ -56,8 +57,8 @@ func (m *WebRTCManager) StartWebRTC() error {
 	})
 
 	dc.OnMessage(func(msg webrtc.DataChannelMessage) {
-		if m.FrameChan != nil {
-			m.FrameChan <- string(msg.Data)
+		if m.RemoteFrameChan != nil {
+			m.RemoteFrameChan <- string(msg.Data)
 		}
 	})
 
@@ -213,13 +214,12 @@ func (m *WebRTCManager) StreamASCII() {
 
 		asciiString := converter.Image2ASCIIString(frame, &options)
 
-		if m.FrameChan != nil {
+		if m.LocalFrameChan != nil {
 			select {
-			case m.FrameChan <- asciiString:
+			case m.LocalFrameChan <- asciiString:
 			default:
 			}
 		}
-
 		err = m.DC.SendText(asciiString)
 
 		release()
