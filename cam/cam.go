@@ -11,8 +11,8 @@ func StartRawCamera() (video.Reader, error) {
 	stream, err := mediadevices.GetUserMedia(mediadevices.MediaStreamConstraints{
 		Video: func(c *mediadevices.MediaTrackConstraints) {
 			// Low resolution is crucial for ASCII art
-			c.Width = prop.Int(160)
-			c.Height = prop.Int(120)
+			c.Width = prop.Int(40)
+			c.Height = prop.Int(30)
 		},
 	})
 	if err != nil {
