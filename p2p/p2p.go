@@ -16,6 +16,7 @@ type WebRTCManager struct {
 	DC         *webrtc.DataChannel
 	WC         *wsclient.ConnectionManager
 	StatusChan chan string
+	FrameChan  chan string
 }
 
 func (m *WebRTCManager) sendStatus(msg string) {
@@ -54,7 +55,9 @@ func (m *WebRTCManager) StartWebRTC() error {
 	})
 
 	dc.OnMessage(func(msg webrtc.DataChannelMessage) {
-		m.sendStatus(string(msg.Data)) // send the stream to the TUI
+		if m.FrameChan != nil {
+			m.FrameChan <- string(msg.Data)
+		}
 	})
 
 	m.PC.OnICECandidate(func(candidate *webrtc.ICECandidate) {
@@ -201,7 +204,7 @@ func (m *WebRTCManager) StreamASCII() {
 		}
 
 		asciiString := cam.ConvertImageToASCII(frame)
-		err = m.DC.SendText(asciiString)
+		err = m.DC.SendText(asciiString) // send the ASCII frame over the data channel
 
 		release()
 

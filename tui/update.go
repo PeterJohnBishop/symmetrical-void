@@ -82,6 +82,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, m.listenForMessages()
 
+	case frameMsg:
+		m.currentFrame = string(msg)
+		return m, m.listenForMessages()
+
 	case wsclient.EventMessage:
 		switch msg.Type {
 		case "connect":
