@@ -196,6 +196,7 @@ func (m *WebRTCManager) StreamASCII() {
 		return
 	}
 
+	frameCount := 0
 	for {
 		frame, release, err := reader.Read()
 		if err != nil {
@@ -207,6 +208,11 @@ func (m *WebRTCManager) StreamASCII() {
 		err = m.DC.SendText(asciiString) // send the ASCII frame over the data channel
 
 		release()
+
+		frameCount++
+		if frameCount%30 == 0 {
+			m.sendStatus(fmt.Sprintf("Sent 30 frames... latest size: %d bytes", len(asciiString)))
+		}
 
 		if err != nil {
 			m.sendStatus("Failed to send ASCII frame, stopping stream.")
